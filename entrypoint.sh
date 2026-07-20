@@ -15,4 +15,4 @@ echo "PORTA: $SERVER_PORT"
 exec java \
 -Dfile.encoding=UTF-8 \
 -XX:+UseContainerSupport \
--jar /app/target/app.jar
+-jar /app/target/*.jar
