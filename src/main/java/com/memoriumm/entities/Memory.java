@@ -27,15 +27,16 @@ public class Memory {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     @NotBlank
     private String title;
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     @NotBlank
     private String photo;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 1000)
     @NotBlank
     private String description;
+    @Column(length = 30)
     @Enumerated(EnumType.STRING)
     private PrivacyTypes visibility;
     private boolean pinned;
@@ -59,6 +60,11 @@ public class Memory {
     private Set<User> autumnHypes;
 
     @ManyToMany
+    @JoinTable(
+            name = "memory_tags",
+            joinColumns = @JoinColumn(name = "memory_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
     private Set<Tag> tags;
 
     @OneToMany(mappedBy = "memory")

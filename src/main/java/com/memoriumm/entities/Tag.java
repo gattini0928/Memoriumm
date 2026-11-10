@@ -30,9 +30,10 @@ public class Tag {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User createdBy;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50)
     @NotBlank
     private String name;
+    @Column(length = 30)
     @Enumerated(EnumType.STRING)
     private TagType visibility;
 

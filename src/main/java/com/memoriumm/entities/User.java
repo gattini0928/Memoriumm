@@ -23,22 +23,25 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(nullable = false)
     private UUID uuid;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     @NotBlank
     private String name;
     @Column(nullable = false)
     @NotBlank
     private String email;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     @NotBlank
     private String username;
     @Column(nullable = false)
     @NotBlank
     private String password;
+    @Column(columnDefinition = "TEXT")
     private String profilePicture;
+    @Column(length = 300)
     private String bio;
     @CreationTimestamp
     private LocalDateTime createdAt;
+    @Column(length = 30)
     @Enumerated(EnumType.STRING)
     private PrivacyTypes privacy;
 
