@@ -24,7 +24,7 @@ public class Tag {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false)
-    private int id;
+    private Integer id;
     @Column(length = 10)
     private String icon;
     @ManyToOne
