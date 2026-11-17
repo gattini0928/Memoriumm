@@ -26,10 +26,10 @@ public class User {
     @Column(nullable = false, length = 100)
     @NotBlank
     private String name;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 150, unique = true)
     @NotBlank
     private String email;
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 100, unique = true)
     @NotBlank
     private String username;
     @Column(nullable = false)

@@ -18,7 +18,7 @@ services:
     container_name: memoriumm-pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@memoriumm.local
+      PGADMIN_DEFAULT_EMAIL: admin@memoriumm.com
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
     ports:
       - "5050:80"
