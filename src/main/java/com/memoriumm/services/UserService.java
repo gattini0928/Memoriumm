@@ -4,20 +4,26 @@ import com.memoriumm.dtos.UserResponseDTO;
 import com.memoriumm.entities.User;
 import com.memoriumm.enums.PrivacyTypes;
 import com.memoriumm.exception.EmailAlreadyExistsException;
+import com.memoriumm.exception.UserNotFoundException;
 import com.memoriumm.exception.UsernameAlreadyExistsException;
+import com.memoriumm.mappers.UserMapper;
 import com.memoriumm.repositories.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 public class UserService {
 
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper mapper;
 
-    public UserService(UserRepository repository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository repository, PasswordEncoder passwordEncoder, UserMapper mapper) {
         this.repository = repository;
         this.passwordEncoder = passwordEncoder;
+        this.mapper = mapper;
     }
 
     public UserResponseDTO create(String name, String email, String username, String password, String profilePicture, PrivacyTypes privacy) {
@@ -38,14 +44,14 @@ public class UserService {
 
         User savedUser = repository.save(user);
 
-        return new UserResponseDTO(
-                savedUser.getUuid(),
-                savedUser.getName(),
-                savedUser.getEmail(),
-                savedUser.getUsername(),
-                savedUser.getProfilePicture(),
-                savedUser.getPrivacy()
-        );
+        return mapper.toDTO(savedUser);
+    }
 
+    public UserResponseDTO findUserById(UUID id) {
+        User user = repository.findById(id)
+                .orElseThrow(()-> new UserNotFoundException());
+
+        UserResponseDTO userDTO = mapper.toDTO(user);
+        return  userDTO;
     }
 }
