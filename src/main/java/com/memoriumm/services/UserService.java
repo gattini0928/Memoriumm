@@ -130,8 +130,6 @@ public class UserService {
         User user = repository.findById(id)
                 .orElseThrow(UserNotFoundException::new);
 
-        String oldPicture = user.getProfilePicture();
-
         String newPicture = s3Service.uploadProfilePicture(photo);
 
         user.setProfilePicture(newPicture);
