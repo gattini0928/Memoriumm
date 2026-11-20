@@ -1,9 +1,11 @@
 package com.memoriumm.services;
 
+import com.memoriumm.dtos.UpdateProfileDTO;
 import com.memoriumm.dtos.UserResponseDTO;
 import com.memoriumm.entities.User;
 import com.memoriumm.enums.PrivacyTypes;
 import com.memoriumm.exception.EmailAlreadyExistsException;
+import com.memoriumm.exception.InvalidPasswordException;
 import com.memoriumm.exception.UserNotFoundException;
 import com.memoriumm.exception.UsernameAlreadyExistsException;
 import com.memoriumm.mappers.UserMapper;
@@ -26,7 +28,13 @@ public class UserService {
         this.mapper = mapper;
     }
 
-    public UserResponseDTO create(String name, String email, String username, String password, String profilePicture, PrivacyTypes privacy) {
+    public UserResponseDTO create(String name,
+                                  String email,
+                                  String username,
+                                  String password,
+                                  String profilePicture,
+                                  PrivacyTypes privacy) {
+
         if (repository.existsByEmail(email)) {
             throw new EmailAlreadyExistsException();
         }
@@ -49,9 +57,73 @@ public class UserService {
 
     public UserResponseDTO findUserById(UUID id) {
         User user = repository.findById(id)
-                .orElseThrow(()-> new UserNotFoundException());
+                .orElseThrow(UserNotFoundException::new);
 
-        UserResponseDTO userDTO = mapper.toDTO(user);
-        return  userDTO;
+        return mapper.toDTO(user);
     }
+
+    public void updateProfile(
+            UUID id,
+            UpdateProfileDTO dto,
+            boolean bioSended
+    ) {
+        User user = repository.findById(id)
+                .orElseThrow(UserNotFoundException::new);
+
+        if (dto.name() != null) {
+            user.setName(dto.name());
+        }
+
+        if (dto.email() != null
+                && !dto.email().equals(user.getEmail())) {
+
+            if (repository.existsByEmail(dto.email())) {
+                throw new EmailAlreadyExistsException();
+            }
+
+            user.setEmail(dto.email());
+        }
+
+        if (dto.username() != null
+                && !dto.username().equals(user.getUsername())) {
+
+            if (repository.existsByUsername(dto.username())) {
+                throw new UsernameAlreadyExistsException();
+            }
+
+            user.setUsername(dto.username());
+        }
+
+        if (bioSended) {
+            user.setBio(dto.bio());
+        }
+
+        if (dto.privacy() != null) {
+            user.setPrivacy(dto.privacy());
+        }
+
+        repository.save(user);
+    }
+
+    public void updatePassword(
+            UUID id,
+            String currentPassword,
+            String newPassword
+    ) {
+        User user = repository.findById(id)
+                .orElseThrow(UserNotFoundException::new);
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new InvalidPasswordException();
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        repository.save(user);
+    }
+
+    public void updateProfilePicture(UUID id, String photo){
+
+    }
+
 }
