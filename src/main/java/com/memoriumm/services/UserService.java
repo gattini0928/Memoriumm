@@ -12,6 +12,7 @@ import com.memoriumm.mappers.UserMapper;
 import com.memoriumm.repositories.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -21,18 +22,20 @@ public class UserService {
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper mapper;
+    private final S3Service s3Service;
 
-    public UserService(UserRepository repository, PasswordEncoder passwordEncoder, UserMapper mapper) {
+    public UserService(UserRepository repository, PasswordEncoder passwordEncoder,
+                       UserMapper mapper, S3Service s3Service) {
         this.repository = repository;
         this.passwordEncoder = passwordEncoder;
         this.mapper = mapper;
+        this.s3Service = s3Service;
     }
 
     public UserResponseDTO create(String name,
                                   String email,
                                   String username,
                                   String password,
-                                  String profilePicture,
                                   PrivacyTypes privacy) {
 
         if (repository.existsByEmail(email)) {
@@ -47,7 +50,7 @@ public class UserService {
         user.setEmail(email);
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
-        user.setProfilePicture(profilePicture);
+        user.setProfilePicture(null);
         user.setPrivacy(privacy);
 
         User savedUser = repository.save(user);
@@ -122,8 +125,20 @@ public class UserService {
         repository.save(user);
     }
 
-    public void updateProfilePicture(UUID id, String photo){
 
+    public void updateProfilePicture(UUID id, MultipartFile photo) {
+        User user = repository.findById(id)
+                .orElseThrow(UserNotFoundException::new);
+
+        String oldPicture = user.getProfilePicture();
+
+        String newPicture = s3Service.uploadProfilePicture(photo);
+
+        user.setProfilePicture(newPicture);
+
+        repository.save(user);
     }
 
 }
+
+
