@@ -85,6 +85,21 @@ public class UserService {
     }
 
 
+    public Set<UserResponseDTO> getAllUserFollowing(UUID id) {
+        User user = repository.findById(id)
+                .orElseThrow(UserNotFoundException::new);
+
+        Set<User> userFollowing = user.getFollowing();
+        Set<UserResponseDTO> userFollowingDTO = new HashSet<>();
+
+        for (User following : userFollowing) {
+            UserResponseDTO followingDTO = mapper.toDTO(following);
+            userFollowingDTO.add(followingDTO);
+        }
+
+        return userFollowingDTO;
+    }
+
 
     public void updateProfile(
             UUID id,
