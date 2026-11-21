@@ -16,8 +16,8 @@ public class UserMapper {
                 user.getProfilePicture(),
                 user.getPrivacy(),
                 user.getCreatedAt(),
-                user.getFollowers().size(),
-                user.getFollowing().size()
+                user.getFollowers() == null ? 0 : user.getFollowers().size(),
+                user.getFollowing() == null ? 0 : user.getFollowing().size()
         );
     }
 }

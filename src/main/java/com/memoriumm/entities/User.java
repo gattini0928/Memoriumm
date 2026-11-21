@@ -7,6 +7,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -46,22 +47,25 @@ public class User {
     private PrivacyTypes privacy;
 
     @ManyToMany
+    @Builder.Default
     @JoinTable(
             name = "user_followers",
             joinColumns = @JoinColumn(name = "following_id"),
             inverseJoinColumns = @JoinColumn(name = "follower_id")
     )
-    private Set<User> followers;
+    private Set<User> followers = new HashSet<>();
 
     @ManyToMany(mappedBy = "followers")
-    private Set<User> following;
+    @Builder.Default
+    private Set<User> following = new HashSet<>();
 
     @ManyToMany
+    @Builder.Default
     @JoinTable(
             name = "user_favorites",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "memory_id")
     )
-    private Set<Memory> favorites;
+    private Set<Memory> favorites = new HashSet<>();
 
 }
