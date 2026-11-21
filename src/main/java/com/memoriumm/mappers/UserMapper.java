@@ -15,7 +15,10 @@ public class UserMapper {
                 user.getUsername(),
                 user.getBio(),
                 user.getProfilePicture(),
-                user.getPrivacy()
+                user.getPrivacy(),
+                user.getCreatedAt(),
+                user.getFollowers().size(),
+                user.getFollowing().size()
         );
     }
 }

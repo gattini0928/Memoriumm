@@ -14,6 +14,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -64,6 +67,24 @@ public class UserService {
 
         return mapper.toDTO(user);
     }
+
+
+    public Set<UserResponseDTO> getAllUserFollowers(UUID id) {
+        User user = repository.findById(id)
+                .orElseThrow(UserNotFoundException::new);
+
+        Set<User> userFollowers = user.getFollowers();
+        Set<UserResponseDTO> userFollowersDTO = new HashSet<>();
+
+        for (User userFollower : userFollowers) {
+            UserResponseDTO userFollowerDTO = mapper.toDTO(userFollower);
+            userFollowersDTO.add(userFollowerDTO);
+        }
+
+        return userFollowersDTO;
+    }
+
+
 
     public void updateProfile(
             UUID id,
@@ -136,6 +157,8 @@ public class UserService {
 
         repository.save(user);
     }
+
+
 
 }
 
