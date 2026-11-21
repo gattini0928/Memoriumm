@@ -28,6 +28,10 @@ jobs:
       DB_URL: jdbc:postgresql://localhost:5432/memoriumm_test
       DB_USERNAME: test
       DB_PASSWORD: test
+      AWS_ACCESS_KEY_ID: testing
+      AWS_SECRET_ACCESS_KEY: testing
+      AWS_REGION: us-east-2
+      AWS_S3_BUCKET: memoriumm-ci-test
 
     steps:
       - uses: actions/checkout@v4
