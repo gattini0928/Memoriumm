@@ -2,6 +2,8 @@
 package com.memoriumm.controllers;
 
 import com.memoriumm.dtos.CreateUserDTO;
+import com.memoriumm.dtos.LoginRequestDTO;
+import com.memoriumm.dtos.LoginResponseDTO;
 import com.memoriumm.dtos.UserResponseDTO;
 import com.memoriumm.entities.User;
 import com.memoriumm.mappers.UserMapper;
@@ -42,6 +44,15 @@ public class UserController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(userDTO);
+    }
+
+    @PostMapping("/auth/login")
+    public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO request) {
+        LoginResponseDTO response = service.login(
+                request.login(),
+                request.password()
+        );
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @GetMapping("/{id}")

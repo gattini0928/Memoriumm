@@ -29,7 +29,6 @@ import org.springframework.security.oauth2.jwt.*;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-import java.time.Instant;
 import java.util.*;
 
 @Service
@@ -75,7 +74,6 @@ public class UserService {
 
         return mapper.toDTO(savedUser);
     }
-
 
     public LoginResponseDTO login(String login, String password) {
 
@@ -128,15 +126,12 @@ public class UserService {
         }
     }
 
-
-
     public UserResponseDTO findUserById(UUID id) {
         User user = repository.findById(id)
                 .orElseThrow(UserNotFoundException::new);
 
         return mapper.toDTO(user);
     }
-
 
     public Set<UserResponseDTO> getAllUserFollowers(UUID id) {
         User user = repository.findById(id)
@@ -152,7 +147,6 @@ public class UserService {
 
         return userFollowersDTO;
     }
-
 
     public Set<UserResponseDTO> getAllUserFollowing(UUID id) {
         User user = repository.findById(id)
@@ -234,7 +228,6 @@ public class UserService {
         repository.save(user);
     }
 
-
     public void updateProfilePicture(UUID id, MultipartFile photo) {
 
         requireOwner(id);
@@ -248,9 +241,6 @@ public class UserService {
 
         repository.save(user);
     }
-
-
-
 }
 
 
