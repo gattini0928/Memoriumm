@@ -1,5 +1,6 @@
 package com.memoriumm.services;
 
+import com.memoriumm.dtos.LoginResponseDTO;
 import com.memoriumm.dtos.UpdateProfileDTO;
 import com.memoriumm.dtos.UserResponseDTO;
 import com.memoriumm.entities.User;
@@ -10,14 +11,26 @@ import com.memoriumm.exception.UserNotFoundException;
 import com.memoriumm.exception.UsernameAlreadyExistsException;
 import com.memoriumm.mappers.UserMapper;
 import com.memoriumm.repositories.UserRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.oauth2.jwt.*;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
+import java.time.Instant;
+import java.util.*;
 
 @Service
 public class UserService {
@@ -26,13 +39,15 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper mapper;
     private final S3Service s3Service;
+    private final JwtEncoder jwtEncoder;
 
     public UserService(UserRepository repository, PasswordEncoder passwordEncoder,
-                       UserMapper mapper, S3Service s3Service) {
+                       UserMapper mapper, S3Service s3Service, JwtEncoder jwtEncoder) {
         this.repository = repository;
         this.passwordEncoder = passwordEncoder;
         this.mapper = mapper;
         this.s3Service = s3Service;
+        this.jwtEncoder = jwtEncoder;
     }
 
     public UserResponseDTO create(String name,
@@ -60,6 +75,60 @@ public class UserService {
 
         return mapper.toDTO(savedUser);
     }
+
+
+    public LoginResponseDTO login(String login, String password) {
+
+        User user = repository.findByEmailOrUsername(login, login)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Credenciais inválidas"
+                ));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Credenciais inválidas"
+            );
+        }
+
+        Instant now = Instant.now();
+
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .subject(user.getUuid().toString())
+                .issuedAt(now)
+                .expiresAt(now.plus(1, ChronoUnit.HOURS))
+                .build();
+
+        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
+
+        String accessToken = jwtEncoder.encode(
+                JwtEncoderParameters.from(header, claims)
+        ).getTokenValue();
+
+        return new LoginResponseDTO(accessToken, "Bearer");
+    }
+
+
+    private void requireOwner(UUID userId) {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (!(authentication instanceof JwtAuthenticationToken jwtAuth)) {
+            throw new AccessDeniedException("Acesso não autorizado");
+        }
+
+        String authenticatedUserId = jwtAuth.getToken().getSubject();
+
+        if (!userId.toString().equals(authenticatedUserId)) {
+            throw new AccessDeniedException(
+                    "Você não tem permissão para modificar este perfil"
+            );
+        }
+    }
+
+
 
     public UserResponseDTO findUserById(UUID id) {
         User user = repository.findById(id)
@@ -106,6 +175,8 @@ public class UserService {
             UpdateProfileDTO dto,
             boolean bioSended
     ) {
+
+        requireOwner(id);
         User user = repository.findById(id)
                 .orElseThrow(UserNotFoundException::new);
 
@@ -149,6 +220,8 @@ public class UserService {
             String currentPassword,
             String newPassword
     ) {
+
+        requireOwner(id);
         User user = repository.findById(id)
                 .orElseThrow(UserNotFoundException::new);
 
@@ -163,6 +236,9 @@ public class UserService {
 
 
     public void updateProfilePicture(UUID id, MultipartFile photo) {
+
+        requireOwner(id);
+
         User user = repository.findById(id)
                 .orElseThrow(UserNotFoundException::new);
 
