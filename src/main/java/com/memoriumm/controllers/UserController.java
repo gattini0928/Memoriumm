@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -137,5 +138,23 @@ public class UserController {
         service.unfollowUser(followerID, id);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/followers")
+    public ResponseEntity<Set<UserResponseDTO>> getAllUserFollowers(
+            @PathVariable UUID id
+    ) {
+        Set<UserResponseDTO> followers = service.getAllUserFollowers(id);
+
+        return ResponseEntity.ok(followers);
+    }
+
+    @GetMapping("/{id}/following")
+    public ResponseEntity<Set<UserResponseDTO>> getAllUserFollowing(
+            @PathVariable UUID id
+    ) {
+        Set<UserResponseDTO> following = service.getAllUserFollowing(id);
+
+        return ResponseEntity.ok(following);
     }
 }
