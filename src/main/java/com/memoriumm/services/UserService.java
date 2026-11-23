@@ -11,6 +11,7 @@ import com.memoriumm.exception.UserNotFoundException;
 import com.memoriumm.exception.UsernameAlreadyExistsException;
 import com.memoriumm.mappers.UserMapper;
 import com.memoriumm.repositories.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -107,7 +108,6 @@ public class UserService {
         return new LoginResponseDTO(accessToken, "Bearer");
     }
 
-
     private void requireOwner(UUID userId) {
 
         Authentication authentication =
@@ -131,6 +131,43 @@ public class UserService {
                 .orElseThrow(UserNotFoundException::new);
 
         return mapper.toDTO(user);
+    }
+
+    @Transactional
+    public void followUser(UUID followerId, UUID userId) {
+
+        requireOwner(followerId);
+
+        if (followerId.equals(userId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Você não pode seguir a si mesmo"
+            );
+        }
+
+        User user = repository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+
+        User follower = repository.findById(followerId)
+                .orElseThrow(UserNotFoundException::new);
+
+        user.getFollowers().add(follower);
+        follower.getFollowing().add(user);
+    }
+
+    @Transactional
+    public void unfollowUser(UUID followerId, UUID userId) {
+
+        requireOwner(followerId);
+
+        User user = repository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+
+        User follower = repository.findById(followerId)
+                .orElseThrow(UserNotFoundException::new);
+
+        user.getFollowers().remove(follower);
+        follower.getFollowing().remove(user);
     }
 
     public Set<UserResponseDTO> getAllUserFollowers(UUID id) {

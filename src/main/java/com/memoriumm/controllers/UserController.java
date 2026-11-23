@@ -2,8 +2,10 @@
 package com.memoriumm.controllers;
 
 import com.memoriumm.dtos.*;
+import com.memoriumm.entities.User;
 import com.memoriumm.mappers.UserMapper;
 import com.memoriumm.services.UserService;
+import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -81,12 +83,58 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/me/password")
+    public ResponseEntity<Void> updatePassword(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody UpdatePasswordDTO request
+    ) {
+        UUID id = UUID.fromString(
+                Objects.requireNonNull(jwt.getSubject())
+        );
+
+        service.updatePassword(
+                id,
+                request.currentPassword(),
+                request.newPassword()
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("me/{id}/profile-picture")
     public ResponseEntity<Void> updateProfilePicture(
             @PathVariable UUID id,
             @RequestParam("photo") MultipartFile photo
     ) {
         service.updateProfilePicture(id, photo);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/follow")
+    public ResponseEntity<Void> follow(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id
+    ) {
+        UUID followerID = UUID.fromString(
+                Objects.requireNonNull(jwt.getSubject())
+        );
+
+        service.followUser(followerID, id);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/unfollow")
+    public ResponseEntity<Void> unfollow(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id
+    ) {
+        UUID followerID = UUID.fromString(
+                Objects.requireNonNull(jwt.getSubject())
+        );
+
+        service.unfollowUser(followerID, id);
 
         return ResponseEntity.noContent().build();
     }
