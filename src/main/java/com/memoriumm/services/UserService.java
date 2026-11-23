@@ -69,7 +69,10 @@ public class UserService {
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
         user.setProfilePicture(null);
-        user.setPrivacy(privacy);
+
+        user.setPrivacy(
+                privacy != null ? privacy : PrivacyTypes.PUBLIC
+        );
 
         User savedUser = repository.save(user);
 

@@ -102,11 +102,15 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("me/{id}/profile-picture")
+    @PutMapping("/me/profile-picture")
     public ResponseEntity<Void> updateProfilePicture(
-            @PathVariable UUID id,
+            @AuthenticationPrincipal Jwt jwt,
             @RequestParam("photo") MultipartFile photo
     ) {
+        UUID id = UUID.fromString(
+                Objects.requireNonNull(jwt.getSubject())
+        );
+
         service.updateProfilePicture(id, photo);
 
         return ResponseEntity.noContent().build();
