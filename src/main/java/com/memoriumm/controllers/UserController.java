@@ -75,6 +75,7 @@ public class UserController {
     @PatchMapping("/me")
     public ResponseEntity<Void> updateProfile(
             @AuthenticationPrincipal Jwt jwt,
+            @Valid
             @RequestBody UpdateProfileDTO userProfileDTO
     ) {
         UUID id = UUID.fromString(
@@ -89,6 +90,7 @@ public class UserController {
     @PutMapping("/me/password")
     public ResponseEntity<Void> updatePassword(
             @AuthenticationPrincipal Jwt jwt,
+            @Valid
             @RequestBody UpdatePasswordDTO request
     ) {
         UUID id = UUID.fromString(

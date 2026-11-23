@@ -1,7 +1,10 @@
+
 package com.memoriumm.exception;
 
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -31,7 +34,7 @@ public class GlobalExceptionHandler {
             UserNotFoundException ex) {
 
         return ResponseEntity
-                .status(HttpStatus.CONFLICT)
+                .status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(ex.getMessage()));
     }
 
@@ -40,7 +43,7 @@ public class GlobalExceptionHandler {
             InvalidPasswordException ex) {
 
         return ResponseEntity
-                .status(HttpStatus.CONFLICT)
+                .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(ex.getMessage()));
     }
 
@@ -49,7 +52,7 @@ public class GlobalExceptionHandler {
             InvalidCreatePasswordException ex) {
 
         return ResponseEntity
-                .status(HttpStatus.CONFLICT)
+                .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(ex.getMessage()));
     }
 
@@ -58,7 +61,7 @@ public class GlobalExceptionHandler {
             InvalidEmailException ex) {
 
         return ResponseEntity
-                .status(HttpStatus.CONFLICT)
+                .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(ex.getMessage()));
     }
 
@@ -67,7 +70,7 @@ public class GlobalExceptionHandler {
             InvalidUsernameException ex) {
 
         return ResponseEntity
-                .status(HttpStatus.CONFLICT)
+                .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(ex.getMessage()));
     }
 
@@ -76,8 +79,23 @@ public class GlobalExceptionHandler {
             InvalidNameException ex) {
 
         return ResponseEntity
-                .status(HttpStatus.CONFLICT)
+                .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(
+            MethodArgumentNotValidException ex) {
+
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .findFirst()
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                .orElse("Dados inválidos");
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(message));
+    }
 }
