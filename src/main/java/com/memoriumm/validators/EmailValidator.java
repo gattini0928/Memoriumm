@@ -4,7 +4,7 @@ import com.memoriumm.exception.InvalidEmailException;
 
 public class EmailValidator {
 
-    public static String validateEmail(String email) {
+    public static void validateEmail(String email) {
 
         if (email == null || !email.contains("@")) {
             throw new InvalidEmailException();
@@ -16,6 +16,5 @@ public class EmailValidator {
             throw new InvalidEmailException();
         }
 
-        return email;
     }
 }

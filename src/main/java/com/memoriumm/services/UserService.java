@@ -11,6 +11,10 @@ import com.memoriumm.exception.UserNotFoundException;
 import com.memoriumm.exception.UsernameAlreadyExistsException;
 import com.memoriumm.mappers.UserMapper;
 import com.memoriumm.repositories.UserRepository;
+import com.memoriumm.validators.EmailValidator;
+import com.memoriumm.validators.NameValidator;
+import com.memoriumm.validators.PasswordValidator;
+import com.memoriumm.validators.UsernameValidator;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -31,6 +35,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 import java.util.*;
+
+import static com.memoriumm.validators.EmailValidator.validateEmail;
+import static com.memoriumm.validators.PasswordValidator.validatePassword;
 
 @Service
 public class UserService {
@@ -64,10 +71,18 @@ public class UserService {
         }
 
         User user = new User();
+        NameValidator.validateName(name);
         user.setName(name);
+
+        EmailValidator.validateEmail(email);
         user.setEmail(email);
+
+        UsernameValidator.validateUsername(username);
         user.setUsername(username);
+
+        PasswordValidator.validatePassword(password);
         user.setPassword(passwordEncoder.encode(password));
+
         user.setProfilePicture(null);
 
         user.setPrivacy(
@@ -213,6 +228,7 @@ public class UserService {
                 .orElseThrow(UserNotFoundException::new);
 
         if (dto.name() != null) {
+            NameValidator.validateName(dto.name());
             user.setName(dto.name());
         }
 
@@ -223,6 +239,7 @@ public class UserService {
                 throw new EmailAlreadyExistsException();
             }
 
+            EmailValidator.validateEmail(dto.email());
             user.setEmail(dto.email());
         }
 
@@ -232,7 +249,7 @@ public class UserService {
             if (repository.existsByUsername(dto.username())) {
                 throw new UsernameAlreadyExistsException();
             }
-
+            UsernameValidator.validateUsername(dto.username());
             user.setUsername(dto.username());
         }
 
@@ -262,6 +279,8 @@ public class UserService {
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
             throw new InvalidPasswordException();
         }
+
+        PasswordValidator.validatePassword(newPassword);
 
         user.setPassword(passwordEncoder.encode(newPassword));
 
