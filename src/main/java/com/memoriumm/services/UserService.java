@@ -163,11 +163,9 @@ public class UserService {
         return userFollowingDTO;
     }
 
-
     public void updateProfile(
             UUID id,
-            UpdateProfileDTO dto,
-            boolean bioSended
+            UpdateProfileDTO dto
     ) {
 
         requireOwner(id);
@@ -198,8 +196,10 @@ public class UserService {
             user.setUsername(dto.username());
         }
 
-        if (bioSended) {
-            user.setBio(dto.bio());
+        if (dto.bio() != null) {
+            user.setBio(
+                    dto.bio().isBlank() ? null : dto.bio().trim()
+            );
         }
 
         if (dto.privacy() != null) {

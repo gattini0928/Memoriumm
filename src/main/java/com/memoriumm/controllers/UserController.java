@@ -1,19 +1,17 @@
 
 package com.memoriumm.controllers;
 
-import com.memoriumm.dtos.CreateUserDTO;
-import com.memoriumm.dtos.LoginRequestDTO;
-import com.memoriumm.dtos.LoginResponseDTO;
-import com.memoriumm.dtos.UserResponseDTO;
-import com.memoriumm.entities.User;
+import com.memoriumm.dtos.*;
 import com.memoriumm.mappers.UserMapper;
 import com.memoriumm.services.UserService;
-import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -55,9 +53,32 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<UserResponseDTO> profile(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID id = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
+
+        return ResponseEntity.ok(service.findUserById(id));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<UserResponseDTO> userProfile(@PathVariable UUID id){
         return ResponseEntity.status(HttpStatus.OK).body(service.findUserById(id));
+    }
+
+    @PatchMapping("/me")
+    public ResponseEntity<Void> updateProfile(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody UpdateProfileDTO userProfileDTO
+    ) {
+        UUID id = UUID.fromString(
+                Objects.requireNonNull(jwt.getSubject())
+        );
+
+        service.updateProfile(id, userProfileDTO);
+
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("me/{id}/profile-picture")
