@@ -10,6 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:17-alpine
@@ -24,6 +25,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
     env:
       DB_URL: jdbc:postgresql://localhost:5432/memoriumm_test
       DB_USERNAME: test
@@ -44,6 +46,9 @@ jobs:
 
       - name: Make Maven Wrapper executable
         run: chmod +x mvnw
+
+      - name: Generate JWT secret for tests
+        run: echo "JWT_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
 
       - name: Build project
         run: ./mvnw clean verify
