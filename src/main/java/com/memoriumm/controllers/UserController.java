@@ -5,6 +5,7 @@ import com.memoriumm.dtos.*;
 import com.memoriumm.entities.User;
 import com.memoriumm.mappers.UserMapper;
 import com.memoriumm.services.UserService;
+import jakarta.validation.Valid;
 import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,7 @@ public class UserController {
 
     @PostMapping("/auth/signup")
     public ResponseEntity<UserResponseDTO> signup(
+            @Valid
             @RequestBody CreateUserDTO dto
     ) {
         UserResponseDTO userDTO = service.create(
