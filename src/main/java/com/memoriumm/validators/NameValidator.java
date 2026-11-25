@@ -13,7 +13,6 @@ public class NameValidator {
             );
         }
 
-        // Verifica se contém apenas letras e espaços
         for (int i = 0; i < name.length(); i++) {
             char c = name.charAt(i);
 
@@ -24,7 +23,6 @@ public class NameValidator {
             }
         }
 
-        // Equivalente ao strings.Fields() do Go
         String[] parts = name.trim().split("\\s+");
 
         if (parts.length < 2) {
