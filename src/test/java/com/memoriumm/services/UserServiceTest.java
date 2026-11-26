@@ -1,4 +1,11 @@
 package com.memoriumm.services;
 
-public class UserServiceTest {
+import org.junit.jupiter.api.Test;
+
+class UserServiceTest {
+
+    @Test
+    void foo() {
+
+    }
 }
