@@ -36,9 +36,6 @@ import java.time.temporal.ChronoUnit;
 
 import java.util.*;
 
-import static com.memoriumm.validators.EmailValidator.validateEmail;
-import static com.memoriumm.validators.PasswordValidator.validatePassword;
-
 @Service
 public class UserService {
 
@@ -300,6 +297,8 @@ public class UserService {
 
         repository.save(user);
     }
+
+
 }
 
 
