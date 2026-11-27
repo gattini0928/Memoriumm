@@ -552,4 +552,131 @@ class UserServiceTest {
         verify(repository, never()).save(any(User.class));
     }
 
+    @Test
+    void shouldUpdatePassword() {
+
+        UUID uuid = UUID.randomUUID();
+
+        String currentPassword = "Password0928$";
+        String newPassword = "NewPassword123#";
+
+        User user = new User();
+        user.setUuid(uuid);
+        user.setPassword("encodedOldPassword");
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.matches(currentPassword, user.getPassword()))
+                .thenReturn(true);
+
+        when(passwordEncoder.encode(newPassword))
+                .thenReturn("encodedNewPassword");
+
+        service.updatePassword(uuid, currentPassword, newPassword);
+
+        assertThat(user.getPassword())
+                .isEqualTo("encodedNewPassword");
+
+        verify(repository).save(user);
+    }
+
+    @Test
+    void shouldRejectPasswordUpdateUserNotFound() {
+
+        UUID uuid = UUID.randomUUID();
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.updatePassword(
+                        uuid, "Password0928$", "NewPassword123#"
+                )
+        ).isInstanceOf(UserNotFoundException.class);
+
+        verify(repository, never()).save(any(User.class));
+    }
+
+    @Test
+    void shouldRejectIncorrectCurrentPassword() {
+
+        UUID uuid = UUID.randomUUID();
+
+        String currentPassword = "WrongPassword123#";
+        String newPassword = "NewPassword123#";
+
+        User user = new User();
+        user.setUuid(uuid);
+        user.setPassword("encodedOldPassword");
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.matches(currentPassword, user.getPassword()))
+                .thenReturn(false);
+
+        assertThatThrownBy(() ->
+                service.updatePassword(uuid, currentPassword, newPassword)
+        ).isInstanceOf(InvalidPasswordException.class);
+
+        assertThat(user.getPassword())
+                .isEqualTo("encodedOldPassword");
+
+        verify(repository, never()).save(any(User.class));
+    }
+
+    @Test
+    void shouldRejectInvalidNewPassword() {
+
+        UUID uuid = UUID.randomUUID();
+
+        String currentPassword = "Password0928$";
+        String newPassword = "123";
+
+        User user = new User();
+        user.setUuid(uuid);
+        user.setPassword("encodedOldPassword");
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.matches(currentPassword, user.getPassword()))
+                .thenReturn(true);
+
+        assertThatThrownBy(() ->
+                service.updatePassword(uuid, currentPassword, newPassword)
+        ).isInstanceOf(InvalidCreatePasswordException.class);
+
+        assertThat(user.getPassword())
+                .isEqualTo("encodedOldPassword");
+
+        verify(repository, never()).save(any(User.class));
+    }
+
+    @Test
+    void shouldRejectUnauthorizedPasswordUpdate() {
+
+        UUID ownerUuid = UUID.randomUUID();
+        UUID anotherUserUuid = UUID.randomUUID();
+
+        authenticateUser(anotherUserUuid);
+
+        assertThatThrownBy(() ->
+                service.updatePassword(
+                        ownerUuid, "Password0928$", "NewPassword123#"
+                )
+        ).isInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(repository, passwordEncoder);
+    }
+
 }
