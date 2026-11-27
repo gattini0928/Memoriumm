@@ -1,22 +1,27 @@
 package com.memoriumm.services;
 
 import com.memoriumm.dtos.LoginResponseDTO;
+import com.memoriumm.dtos.UpdateProfileDTO;
 import com.memoriumm.dtos.UserResponseDTO;
 import com.memoriumm.entities.User;
 import com.memoriumm.enums.PrivacyTypes;
 import com.memoriumm.exception.*;
 import com.memoriumm.mappers.UserMapper;
 import com.memoriumm.repositories.UserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.temporal.ChronoUnit;
@@ -51,6 +56,24 @@ class UserServiceTest {
     @InjectMocks
     private UserService service;
 
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateUser(UUID uuid) {
+        JwtAuthenticationToken authentication =
+                mock(JwtAuthenticationToken.class);
+
+        Jwt jwt = mock(Jwt.class);
+
+        when(authentication.getToken()).thenReturn(jwt);
+        when(jwt.getSubject()).thenReturn(uuid.toString());
+
+        SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
+    }
+
     @Test
     void shouldCreateUser() {
 
@@ -82,7 +105,6 @@ class UserServiceTest {
     @Test
     void shouldRaiseEmailAlreadyExistsException() {
 
-        // Arrange
         String name = "Gabriel Gattini";
         String email = "teste@example.com";
         String username = "gattini0928";
@@ -94,13 +116,12 @@ class UserServiceTest {
         assertThatThrownBy(() ->
                 service.create(name, email, username, password, privacy)
         ).isInstanceOf(EmailAlreadyExistsException.class)
-                .hasMessageContaining("já esta cadastrado");
+                .hasMessageContaining("já está cadastrado");
     }
 
     @Test
     void shouldRaiseUsernameAlreadyExistsException() {
 
-        // Arrange
         String name = "Gabriel Gattini";
         String email = "teste@example.com";
         String username = "gattini0928";
@@ -112,7 +133,7 @@ class UserServiceTest {
         assertThatThrownBy(() ->
                 service.create(name, email, username, password, privacy)
         ).isInstanceOf(UsernameAlreadyExistsException.class)
-                .hasMessageContaining("usuário já esta cadastrado");
+                .hasMessageContaining("usuário já está cadastrado");
     }
 
     @Test
@@ -285,6 +306,250 @@ class UserServiceTest {
                 .hasMessageContaining("Credenciais inválidas");
     }
 
+    @Test
+    void shouldReturnUserFindByID(){
+        User user = new User();
+        user.setUuid(UUID.randomUUID());
 
+        UserResponseDTO expectedDTO = mock(UserResponseDTO.class);
+
+        when(repository.findById(user.getUuid()))
+                .thenReturn(Optional.of(user));
+
+        when(mapper.toDTO(user))
+                .thenReturn(expectedDTO);
+
+        UserResponseDTO userResponseDTO = service.findUserById(user.getUuid());
+
+        assertThat(userResponseDTO).isEqualTo(expectedDTO);
+    }
+
+    @Test
+    void shouldRaiseUserNotFoundException() {
+
+        UUID uuid = UUID.randomUUID();
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.findUserById(uuid)
+        ).isInstanceOf(UserNotFoundException.class)
+                .hasMessageContaining("Usuário não encontrado");
+    }
+
+    @Test
+    void shouldUpdateProfile() {
+
+        User user = new User();
+        user.setUuid(UUID.randomUUID());
+
+        String name = "Gabriel Gattini";
+        String email = "teste@example.com";
+        String username = "gattini0928";
+        String bio = "Desenvolvedor de Software";
+        PrivacyTypes privacy = PrivacyTypes.PRIVATE;
+
+        UpdateProfileDTO updateProfileDTO =
+                new UpdateProfileDTO(name, email, username, bio, privacy);
+
+
+        authenticateUser(user.getUuid());
+
+        when(repository.findById(user.getUuid()))
+                .thenReturn(Optional.of(user));
+
+        service.updateProfile(user.getUuid(), updateProfileDTO);
+
+        assertThat(user.getName()).isEqualTo(name);
+        assertThat(user.getEmail()).isEqualTo(email);
+        assertThat(user.getUsername()).isEqualTo(username);
+        assertThat(user.getBio()).isEqualTo(bio);
+        assertThat(user.getPrivacy()).isEqualTo(privacy);
+
+        verify(repository).save(user);
+    }
+
+    @Test
+    void shouldRejectUpdateProfileUserNotFound() {
+
+        UUID uuid = UUID.randomUUID();
+
+        String name = "Gabriel Gattini";
+        String email = "teste@example.com";
+        String username = "gattini0928";
+        String bio = "Desenvolvedor de Software";
+        PrivacyTypes privacy = PrivacyTypes.PRIVATE;
+
+        UpdateProfileDTO updateProfileDTO =
+                new UpdateProfileDTO(name, email, username, bio, privacy);
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.updateProfile(uuid, updateProfileDTO)
+        ).isInstanceOf(UserNotFoundException.class)
+                .hasMessageContaining("Usuário não encontrado");
+    }
+
+    @Test
+    void shouldRejectUpdateProfileEmailAlreadyExists() {
+
+        User user = new User();
+        UUID uuid = UUID.randomUUID();
+
+        String name = "Gabriel Gattini";
+        String email = "teste@example.com";
+        String username = "gattini0928";
+        String bio = "Desenvolvedor de Software";
+        PrivacyTypes privacy = PrivacyTypes.PRIVATE;
+
+        UpdateProfileDTO updateProfileDTO =
+                new UpdateProfileDTO(name, email, username, bio, privacy);
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.of(user));
+
+        when(repository.existsByEmail(email))
+                .thenReturn(true);
+
+        assertThatThrownBy(() ->
+                service.updateProfile(uuid, updateProfileDTO)
+        ).isInstanceOf(EmailAlreadyExistsException.class)
+                .hasMessageContaining("já está cadastrado");
+    }
+
+    @Test
+    void shouldRejectUpdateProfileUsernameAlreadyExists() {
+
+        User user = new User();
+        UUID uuid = UUID.randomUUID();
+
+        String name = "Gabriel Gattini";
+        String email = "teste@example.com";
+        String username = "gattini0928";
+        String bio = "Desenvolvedor de Software";
+        PrivacyTypes privacy = PrivacyTypes.PRIVATE;
+
+        UpdateProfileDTO updateProfileDTO =
+                new UpdateProfileDTO(name, email, username, bio, privacy);
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.of(user));
+
+        when(repository.existsByUsername(username))
+                .thenReturn(true);
+
+        assertThatThrownBy(() ->
+                service.updateProfile(uuid, updateProfileDTO)
+        ).isInstanceOf(UsernameAlreadyExistsException.class)
+                .hasMessageContaining("já está cadastrado");
+    }
+
+    @Test
+    void shouldKeepUserInfosWhenGivenNullValues() {
+
+        UUID uuid = UUID.randomUUID();
+
+        User user = new User();
+        user.setUuid(uuid);
+        user.setName("Gabriel Gattini");
+        user.setEmail("teste@example.com");
+        user.setUsername("gattini0928");
+        user.setBio("Desenvolvedor de Software");
+        user.setPrivacy(PrivacyTypes.PRIVATE);
+
+        UpdateProfileDTO dto =
+                new UpdateProfileDTO(null, null, null, null, null);
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.of(user));
+
+        service.updateProfile(uuid, dto);
+
+        assertThat(user.getName()).isEqualTo("Gabriel Gattini");
+        assertThat(user.getEmail()).isEqualTo("teste@example.com");
+        assertThat(user.getUsername()).isEqualTo("gattini0928");
+        assertThat(user.getBio()).isEqualTo("Desenvolvedor de Software");
+        assertThat(user.getPrivacy()).isEqualTo(PrivacyTypes.PRIVATE);
+
+        verify(repository).save(user);
+    }
+
+    @Test
+    void shouldClearBioWhenBlank() {
+
+        UUID uuid = UUID.randomUUID();
+
+        User user = new User();
+        user.setUuid(uuid);
+        user.setBio("Minha bio anterior");
+
+        UpdateProfileDTO updateProfileDTO =
+                new UpdateProfileDTO(null, null, null, "   ", null);
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.of(user));
+
+        service.updateProfile(uuid, updateProfileDTO);
+
+        assertThat(user.getBio()).isNull();
+
+        verify(repository).save(user);
+    }
+
+    @Test
+    void shouldTrimBio() {
+
+        UUID uuid = UUID.randomUUID();
+
+        User user = new User();
+        user.setUuid(uuid);
+
+        UpdateProfileDTO updateProfileDTO =
+                new UpdateProfileDTO(null, null, null,
+                        "  Desenvolvedor de Software  ", null);
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.of(user));
+
+        service.updateProfile(uuid, updateProfileDTO);
+
+        assertThat(user.getBio())
+                .isEqualTo("Desenvolvedor de Software");
+
+        verify(repository).save(user);
+    }
+
+    @Test
+    void shouldRejectUnauthorizedProfileUpdate() {
+
+        UUID ownerUuid = UUID.randomUUID();
+        UUID anotherUserUuid = UUID.randomUUID();
+
+        UpdateProfileDTO updateProfileDTO =
+                new UpdateProfileDTO(null, null, null, "Nova bio", null);
+
+        authenticateUser(anotherUserUuid);
+
+        assertThatThrownBy(() ->
+                service.updateProfile(ownerUuid, updateProfileDTO)
+        ).isInstanceOf(AccessDeniedException.class);
+
+        verify(repository, never()).save(any(User.class));
+    }
 
 }
