@@ -22,6 +22,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.temporal.ChronoUnit;
@@ -678,5 +679,102 @@ class UserServiceTest {
 
         verifyNoInteractions(repository, passwordEncoder);
     }
+
+    @Test
+    void shouldUpdateProfilePicture() {
+
+        UUID uuid = UUID.randomUUID();
+
+        User user = new User();
+        user.setUuid(uuid);
+
+        MultipartFile photo = mock(MultipartFile.class);
+
+        String newPicture = "profiles/new-picture.png";
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.of(user));
+
+        when(s3Service.uploadProfilePicture(photo))
+                .thenReturn(newPicture);
+
+        service.updateProfilePicture(uuid, photo);
+
+        assertThat(user.getProfilePicture())
+                .isEqualTo(newPicture);
+
+        verify(repository).save(user);
+    }
+
+    @Test
+    void shouldRejectProfilePictureUpdateUserNotFound() {
+
+        UUID uuid = UUID.randomUUID();
+
+        MultipartFile photo = mock(MultipartFile.class);
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.updateProfilePicture(uuid, photo)
+        ).isInstanceOf(UserNotFoundException.class);
+
+        verify(repository, never()).save(any(User.class));
+
+        verifyNoInteractions(s3Service);
+    }
+
+    @Test
+    void shouldRejectUnauthorizedProfilePictureUpdate() {
+
+        UUID ownerUuid = UUID.randomUUID();
+        UUID anotherUserUuid = UUID.randomUUID();
+
+        MultipartFile photo = mock(MultipartFile.class);
+
+        authenticateUser(anotherUserUuid);
+
+        assertThatThrownBy(() ->
+                service.updateProfilePicture(ownerUuid, photo)
+        ).isInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(repository, s3Service);
+    }
+
+    @Test
+    void shouldKeepProfilePictureWhenUploadFails() {
+
+        UUID uuid = UUID.randomUUID();
+
+        User user = new User();
+        user.setUuid(uuid);
+        user.setProfilePicture("profiles/old-picture.png");
+
+        MultipartFile photo = mock(MultipartFile.class);
+
+        authenticateUser(uuid);
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.of(user));
+
+        when(s3Service.uploadProfilePicture(photo))
+                .thenThrow(new IllegalStateException("Erro no upload"));
+
+        assertThatThrownBy(() ->
+                service.updateProfilePicture(uuid, photo)
+        ).isInstanceOf(IllegalStateException.class);
+
+        assertThat(user.getProfilePicture())
+                .isEqualTo("profiles/old-picture.png");
+
+        verify(repository, never()).save(any(User.class));
+    }
+
+
 
 }
