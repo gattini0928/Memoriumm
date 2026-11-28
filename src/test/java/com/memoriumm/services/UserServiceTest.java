@@ -27,6 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -775,6 +776,318 @@ class UserServiceTest {
         verify(repository, never()).save(any(User.class));
     }
 
+    @Test
+    void shouldFollowUser() {
 
+        User user = new User();
+        user.setUuid(UUID.randomUUID());
 
+        User follower = new User();
+        follower.setUuid(UUID.randomUUID());
+
+        authenticateUser(follower.getUuid());
+
+        when(repository.findById(user.getUuid()))
+                .thenReturn(Optional.of(user));
+
+        when(repository.findById(follower.getUuid()))
+                .thenReturn(Optional.of(follower));
+
+        service.followUser(follower.getUuid(), user.getUuid());
+
+        assertThat(user.getFollowers()).contains(follower);
+        assertThat(follower.getFollowing()).contains(user);
+    }
+
+    @Test
+    void shouldRejectSelfFollow() {
+
+        UUID uuid = UUID.randomUUID();
+
+        authenticateUser(uuid);
+
+        assertThatThrownBy(() ->
+                service.followUser(uuid, uuid)
+        ).isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Você não pode seguir a si mesmo");
+
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void shouldRejectFollowUserNotFound() {
+
+        UUID followerId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        authenticateUser(followerId);
+
+        when(repository.findById(userId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.followUser(followerId, userId)
+        ).isInstanceOf(UserNotFoundException.class);
+    }
+
+    @Test
+    void shouldRejectFollowerNotFound() {
+
+        UUID followerId = UUID.randomUUID();
+
+        User user = new User();
+        user.setUuid(UUID.randomUUID());
+
+        authenticateUser(followerId);
+
+        when(repository.findById(user.getUuid()))
+                .thenReturn(Optional.of(user));
+
+        when(repository.findById(followerId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.followUser(followerId, user.getUuid())
+        ).isInstanceOf(UserNotFoundException.class);
+
+        assertThat(user.getFollowers()).isEmpty();
+    }
+
+    @Test
+    void shouldRejectUnauthorizedFollow() {
+
+        UUID followerId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID anotherUserId = UUID.randomUUID();
+
+        authenticateUser(anotherUserId);
+
+        assertThatThrownBy(() ->
+                service.followUser(followerId, userId)
+        ).isInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void shouldUnfollowUser() {
+
+        User user = new User();
+        user.setUuid(UUID.randomUUID());
+
+        User follower = new User();
+        follower.setUuid(UUID.randomUUID());
+
+        user.getFollowers().add(follower);
+        follower.getFollowing().add(user);
+
+        authenticateUser(follower.getUuid());
+
+        when(repository.findById(user.getUuid()))
+                .thenReturn(Optional.of(user));
+
+        when(repository.findById(follower.getUuid()))
+                .thenReturn(Optional.of(follower));
+
+        service.unfollowUser(follower.getUuid(), user.getUuid());
+
+        assertThat(user.getFollowers()).doesNotContain(follower);
+        assertThat(follower.getFollowing()).doesNotContain(user);
+    }
+
+    @Test
+    void shouldRejectUnfollowUserNotFound() {
+
+        UUID followerId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        authenticateUser(followerId);
+
+        when(repository.findById(userId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.unfollowUser(followerId, userId)
+        ).isInstanceOf(UserNotFoundException.class);
+    }
+
+    @Test
+    void shouldRejectUnfollowFollowerNotFound() {
+
+        UUID followerId = UUID.randomUUID();
+
+        User user = new User();
+        user.setUuid(UUID.randomUUID());
+
+        authenticateUser(followerId);
+
+        when(repository.findById(user.getUuid()))
+                .thenReturn(Optional.of(user));
+
+        when(repository.findById(followerId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.unfollowUser(followerId, user.getUuid())
+        ).isInstanceOf(UserNotFoundException.class);
+    }
+
+    @Test
+    void shouldRejectUnauthorizedUnfollow() {
+
+        UUID followerId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID anotherUserId = UUID.randomUUID();
+
+        authenticateUser(anotherUserId);
+
+        assertThatThrownBy(() ->
+                service.unfollowUser(followerId, userId)
+        ).isInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void shouldReturnAllUserFollowers() {
+
+        User user = new User();
+        user.setUuid(UUID.randomUUID());
+
+        User follower1 = new User();
+        follower1.setUuid(UUID.randomUUID());
+
+        User follower2 = new User();
+        follower2.setUuid(UUID.randomUUID());
+
+        user.getFollowers().add(follower1);
+        user.getFollowers().add(follower2);
+
+        UserResponseDTO dto1 = mock(UserResponseDTO.class);
+        UserResponseDTO dto2 = mock(UserResponseDTO.class);
+
+        when(repository.findById(user.getUuid()))
+                .thenReturn(Optional.of(user));
+
+        when(mapper.toDTO(follower1)).thenReturn(dto1);
+        when(mapper.toDTO(follower2)).thenReturn(dto2);
+
+        Set<UserResponseDTO> result =
+                service.getAllUserFollowers(user.getUuid());
+
+        assertThat(result).containsExactlyInAnyOrder(dto1, dto2);
+    }
+
+    @Test
+    void shouldReturnEmptyFollowers() {
+
+        User user = new User();
+        user.setUuid(UUID.randomUUID());
+
+        when(repository.findById(user.getUuid()))
+                .thenReturn(Optional.of(user));
+
+        Set<UserResponseDTO> result =
+                service.getAllUserFollowers(user.getUuid());
+
+        assertThat(result).isEmpty();
+
+        verifyNoInteractions(mapper);
+    }
+
+    @Test
+    void shouldRejectGetFollowersUserNotFound() {
+
+        UUID uuid = UUID.randomUUID();
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.getAllUserFollowers(uuid)
+        ).isInstanceOf(UserNotFoundException.class);
+
+        verifyNoInteractions(mapper);
+    }
+
+    @Test
+    void shouldReturnAllUserFollowing() {
+
+        User user = new User();
+        user.setUuid(UUID.randomUUID());
+
+        User following1 = new User();
+        following1.setUuid(UUID.randomUUID());
+
+        User following2 = new User();
+        following2.setUuid(UUID.randomUUID());
+
+        user.getFollowing().add(following1);
+        user.getFollowing().add(following2);
+
+        UserResponseDTO dto1 = mock(UserResponseDTO.class);
+        UserResponseDTO dto2 = mock(UserResponseDTO.class);
+
+        when(repository.findById(user.getUuid()))
+                .thenReturn(Optional.of(user));
+
+        when(mapper.toDTO(following1)).thenReturn(dto1);
+        when(mapper.toDTO(following2)).thenReturn(dto2);
+
+        Set<UserResponseDTO> result =
+                service.getAllUserFollowing(user.getUuid());
+
+        assertThat(result).containsExactlyInAnyOrder(dto1, dto2);
+    }
+
+    @Test
+    void shouldReturnEmptyFollowing() {
+
+        User user = new User();
+        user.setUuid(UUID.randomUUID());
+
+        when(repository.findById(user.getUuid()))
+                .thenReturn(Optional.of(user));
+
+        Set<UserResponseDTO> result =
+                service.getAllUserFollowing(user.getUuid());
+
+        assertThat(result).isEmpty();
+
+        verifyNoInteractions(mapper);
+    }
+
+    @Test
+    void shouldRejectGetFollowingUserNotFound() {
+
+        UUID uuid = UUID.randomUUID();
+
+        when(repository.findById(uuid))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.getAllUserFollowing(uuid)
+        ).isInstanceOf(UserNotFoundException.class);
+
+        verifyNoInteractions(mapper);
+    }
+
+    @Test
+    void shouldRejectUnauthenticatedUser() {
+
+        UUID uuid = UUID.randomUUID();
+
+        SecurityContextHolder.clearContext();
+
+        assertThatThrownBy(() ->
+                service.updatePassword(
+                        uuid,
+                        "Password0928$",
+                        "NewPassword123#"
+                )
+        ).isInstanceOf(AccessDeniedException.class)
+                .hasMessage("Acesso não autorizado");
+
+        verifyNoInteractions(repository, passwordEncoder);
+    }
 }
